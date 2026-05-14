@@ -11,7 +11,6 @@ public interface ICustomerLeadService
 
 public class CustomerLeadService : ICustomerLeadService
 {
-    // Mock in-memory store for deduplication
     private static readonly HashSet<string> _seenIdNumbers = new();
     private static readonly HashSet<string> _seenPolicyNumbers = new();
 
@@ -20,7 +19,7 @@ public class CustomerLeadService : ICustomerLeadService
         var documentType = extraction.DocumentType?.ToLowerInvariant() switch
         {
             "kimlik" or "trnc_id" => DocumentType.Kimlik,
-            "insurance_policy" or "policy" => DocumentType.InsurancePolicy,
+            "sigorta_policesi" or "insurance_policy" or "policy" or "polis" => DocumentType.InsurancePolicy,
             _ => DocumentType.Unknown
         };
 
@@ -33,6 +32,8 @@ public class CustomerLeadService : ICustomerLeadService
             IdNumber = extraction.IdNumber?.Trim(),
             DateOfBirth = ParseDate(extraction.DateOfBirth),
             IdExpiry = ParseDate(extraction.IdExpiry),
+            Nationality = TrncDocumentValidator.NormalizeTurkishText(extraction.Nationality),
+            Gender = TrncDocumentValidator.NormalizeTurkishText(extraction.Gender),
             PolicyNumber = extraction.PolicyNumber?.Trim(),
             VehiclePlate = extraction.VehiclePlate?.Trim().ToUpperInvariant(),
             Premium = ParseDecimal(extraction.Premium),
@@ -47,14 +48,14 @@ public class CustomerLeadService : ICustomerLeadService
             if (lead.DocumentType == DocumentType.Kimlik && !string.IsNullOrEmpty(lead.IdNumber))
             {
                 if (_seenIdNumbers.Contains(lead.IdNumber))
-                    errors.Add("Duplicate ID number detected");
+                    errors.Add("Bu kimlik numarasi zaten kayitli");
                 else
                     _seenIdNumbers.Add(lead.IdNumber);
             }
             else if (lead.DocumentType == DocumentType.InsurancePolicy && !string.IsNullOrEmpty(lead.PolicyNumber))
             {
                 if (_seenPolicyNumbers.Contains(lead.PolicyNumber))
-                    errors.Add("Duplicate policy number detected");
+                    errors.Add("Bu polis numarasi zaten kayitli");
                 else
                     _seenPolicyNumbers.Add(lead.PolicyNumber);
             }

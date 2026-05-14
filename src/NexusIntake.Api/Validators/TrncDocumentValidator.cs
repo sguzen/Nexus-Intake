@@ -1,15 +1,10 @@
-using System.Text.RegularExpressions;
 using NexusIntake.Api.Models;
 
 namespace NexusIntake.Api.Validators;
 
 public static partial class TrncDocumentValidator
 {
-    private const int TrncIdLength = 10;
     private const double MinimumConfidence = 0.6;
-
-    [GeneratedRegex(@"^\d{10}$")]
-    private static partial Regex IdNumberPattern();
 
     public static List<string> Validate(CustomerLead lead)
     {
@@ -17,38 +12,46 @@ public static partial class TrncDocumentValidator
 
         if (lead.ConfidenceScore < MinimumConfidence)
         {
-            errors.Add("Confidence score too low — image may be blurry or unreadable");
+            errors.Add("Guven skoru cok dusuk — goruntu bulanik veya okunamaz durumda");
             return errors;
         }
 
         if (lead.DocumentType == DocumentType.Kimlik)
         {
-            if (string.IsNullOrWhiteSpace(lead.IdNumber) || !IdNumberPattern().IsMatch(lead.IdNumber))
-                errors.Add("Invalid TRNC ID number: must be exactly 10 digits");
+            if (string.IsNullOrWhiteSpace(lead.IdNumber))
+                errors.Add("Kimlik numarasi zorunludur");
+            else if (lead.IdNumber.Length is < 5 or > 30)
+                errors.Add("Gecersiz kimlik numarasi: en az 5, en fazla 30 karakter olmalidir");
 
             if (string.IsNullOrWhiteSpace(lead.Name))
-                errors.Add("Name is required");
+                errors.Add("Ad alani zorunludur");
 
             if (string.IsNullOrWhiteSpace(lead.Surname))
-                errors.Add("Surname is required");
+                errors.Add("Soyad alani zorunludur");
 
             if (lead.DateOfBirth is null || lead.DateOfBirth > DateTime.UtcNow)
-                errors.Add("Invalid date of birth");
+                errors.Add("Gecersiz dogum tarihi");
+
+            if (string.IsNullOrWhiteSpace(lead.Nationality))
+                errors.Add("Uyruk alani zorunludur");
+
+            if (string.IsNullOrWhiteSpace(lead.Gender))
+                errors.Add("Cinsiyet alani zorunludur");
         }
         else if (lead.DocumentType == DocumentType.InsurancePolicy)
         {
             if (string.IsNullOrWhiteSpace(lead.PolicyNumber))
-                errors.Add("Policy number is required");
+                errors.Add("Polis numarasi zorunludur");
 
             if (string.IsNullOrWhiteSpace(lead.VehiclePlate))
-                errors.Add("Vehicle plate is required");
+                errors.Add("Arac plakasi zorunludur");
 
             if (lead.PolicyExpiry is null || lead.PolicyExpiry <= DateTime.UtcNow)
-                errors.Add("Policy has expired or expiry date is invalid");
+                errors.Add("Polis suresi dolmus veya gecersiz tarih");
         }
         else
         {
-            errors.Add("Unknown document type — unable to classify");
+            errors.Add("Bilinmeyen belge turu — siniflandirilamadi");
         }
 
         return errors;
@@ -58,6 +61,12 @@ public static partial class TrncDocumentValidator
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
         return CultureInfoNormalizer.ToTitleCase(input.Trim().ToLowerInvariant());
+    }
+
+    public static string NormalizeTurkishText(string? input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        return input.Trim().ToUpperInvariant();
     }
 }
 

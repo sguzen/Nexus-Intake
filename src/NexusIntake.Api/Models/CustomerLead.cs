@@ -10,6 +10,8 @@ public class CustomerLead
     public string? IdNumber { get; init; }
     public DateTime? DateOfBirth { get; init; }
     public DateTime? IdExpiry { get; init; }
+    public string? Nationality { get; init; }
+    public string? Gender { get; init; }
 
     public string? PolicyNumber { get; init; }
     public string? VehiclePlate { get; init; }

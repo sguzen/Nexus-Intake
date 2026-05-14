@@ -4,39 +4,45 @@ namespace NexusIntake.Api.Models;
 
 public class ExtractionResult
 {
-    [JsonPropertyName("document_type")]
+    [JsonPropertyName("belge_turu")]
     public string DocumentType { get; set; } = string.Empty;
 
-    [JsonPropertyName("name")]
+    [JsonPropertyName("ad")]
     public string? Name { get; set; }
 
-    [JsonPropertyName("surname")]
+    [JsonPropertyName("soyad")]
     public string? Surname { get; set; }
 
-    [JsonPropertyName("id_number")]
+    [JsonPropertyName("kimlik_no")]
     public string? IdNumber { get; set; }
 
-    [JsonPropertyName("date_of_birth")]
+    [JsonPropertyName("dogum_tarihi")]
     public string? DateOfBirth { get; set; }
 
-    [JsonPropertyName("id_expiry")]
+    [JsonPropertyName("kimlik_son_kullanma")]
     public string? IdExpiry { get; set; }
 
-    [JsonPropertyName("policy_number")]
+    [JsonPropertyName("uyruk")]
+    public string? Nationality { get; set; }
+
+    [JsonPropertyName("cinsiyet")]
+    public string? Gender { get; set; }
+
+    [JsonPropertyName("polis_no")]
     public string? PolicyNumber { get; set; }
 
-    [JsonPropertyName("vehicle_plate")]
+    [JsonPropertyName("arac_plaka")]
     public string? VehiclePlate { get; set; }
 
-    [JsonPropertyName("premium")]
+    [JsonPropertyName("prim")]
     public string? Premium { get; set; }
 
-    [JsonPropertyName("policy_expiry")]
+    [JsonPropertyName("polis_son_kullanma")]
     public string? PolicyExpiry { get; set; }
 
-    [JsonPropertyName("confidence_score")]
+    [JsonPropertyName("guven_skoru")]
     public double ConfidenceScore { get; set; }
 
-    [JsonPropertyName("error")]
+    [JsonPropertyName("hata")]
     public string? Error { get; set; }
 }

@@ -5,6 +5,8 @@ using NexusIntake.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Configuration.AddUserSecrets<Program>();
+
 builder.Services.AddSingleton<ITelegramBotClient>(sp =>
 {
     var token = Environment.GetEnvironmentVariable("Telegram__BotToken")

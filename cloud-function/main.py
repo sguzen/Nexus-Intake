@@ -22,30 +22,32 @@ MODEL_NAME = "gemini-2.5-flash"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 
-SYSTEM_PROMPT = """You are a specialized TRNC (Turkish Republic of Northern Cyprus) Document Parser.
-Your task is to extract data from images of official documents.
+SYSTEM_PROMPT = """Sen bir uluslararasi kimlik ve sigorta belgesi cozumleyicisisin.
+Gorevin resmi belge gorsellerinden veri cikarmaktir. Her ulkeden kimlik karti kabul edilir.
 
-Rules:
-1. If the image is a TRNC Kimlik (ID Card), extract: Name, Surname, ID Number (must be 10 digits), Date of Birth, ID Expiry Date.
-2. If the image is an Insurance Policy (Turkish: Sigorta Poliçesi), extract: Policy Number, Vehicle Plate, Premium (in TRY), Policy Expiry Date.
-3. Translate all Turkish field name keys to their English equivalents.
-4. If the image is too blurry or unreadable, set error field with an appropriate message.
-5. Output strictly valid JSON with the schema below. No markdown, no extra text.
+Kurallar:
+1. Eger gorsel bir Kimlik karti ise sunlari cikar: Ad, Soyad, Kimlik No (belgede yazan haliyle), Dogum Tarihi, Kimlik Son Kullanma Tarihi, Uyruk (belgede yazan ulke), Cinsiyet.
+2. Eger gorsel bir Sigorta Policesi ise sunlari cikar: Polis No, Arac Plaka, Prim (TL cinsinden), Polis Son Kullanma Tarihi.
+3. Tum alan isimleri Turkce OLMALIDIR.
+4. Eger gorsel cok bulanik veya okunamaz durumda ise, hata alanina uygun bir mesaj yaz.
+5. Yalnizca gecerli JSON ciktisi ver. Markdown veya ekstra metin olmasin.
 
-Output JSON schema:
+Cikti JSON semasi:
 {
-  "document_type": "kimlik" | "insurance_policy" | "unknown",
-  "name": "string or null",
-  "surname": "string or null",
-  "id_number": "string or null (10 digits if kimlik)",
-  "date_of_birth": "YYYY-MM-DD or null",
-  "id_expiry": "YYYY-MM-DD or null",
-  "policy_number": "string or null",
-  "vehicle_plate": "string or null",
-  "premium": "string or null (numeric, TRY)",
-  "policy_expiry": "YYYY-MM-DD or null",
-  "confidence_score": 0.0-1.0,
-  "error": "string or null (set if image is unusable)"
+  "belge_turu": "kimlik" | "sigorta_policesi" | "bilinmeyen",
+  "ad": "string veya null",
+  "soyad": "string veya null",
+  "kimlik_no": "string veya null (belgede yazan haliyle)",
+  "dogum_tarihi": "YYYY-MM-DD veya null",
+  "kimlik_son_kullanma": "YYYY-MM-DD veya null",
+  "uyruk": "string veya null (ornek: KKTC, TC, UK, DE, vb.)",
+  "cinsiyet": "string veya null (ERKEK veya KADIN)",
+  "polis_no": "string veya null",
+  "arac_plaka": "string veya null",
+  "prim": "string veya null (sayisal, TL)",
+  "polis_son_kullanma": "YYYY-MM-DD veya null",
+  "guven_skoru": 0.0-1.0,
+  "hata": "string veya null (goruntu kullanilamaz durumda ise)"
 }
 """
 
@@ -62,6 +64,36 @@ def download_from_gcs(gcs_uri: str) -> bytes:
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(object_name)
     return blob.download_as_bytes()
+
+
+def _extract_json(text: str) -> str:
+    """Extract JSON string from Gemini response — handles markdown fences and inline text."""
+    import re
+
+    # Try to find JSON inside ```json ... ``` or ``` ... ``` fences
+    fence_pattern = r'```(?:json)?\s*\n(.*?)\n```'
+    matches = re.findall(fence_pattern, text, re.DOTALL)
+    for match in matches:
+        stripped = match.strip()
+        if stripped.startswith("{"):
+            return stripped
+
+    # No fences found — find the first { ... } block
+    start = text.find("{")
+    if start == -1:
+        return text
+
+    # Track braces to find the matching closing brace
+    depth = 0
+    for i, char in enumerate(text[start:], start=start):
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    return text
 
 
 def extract_with_gemini(image_bytes: bytes) -> dict:
@@ -87,34 +119,59 @@ def extract_with_gemini(image_bytes: bytes) -> dict:
 
     raw_text = response.text.strip() if response.text else ""
 
-    # Strip markdown code fences if present
-    if raw_text.startswith("```"):
-        lines = raw_text.split("\n")
-        lines = [l for l in lines if not l.startswith("```")]
-        raw_text = "\n".join(lines).strip()
+    # Try to extract JSON from markdown code fences anywhere in the response
+    json_str = _extract_json(raw_text)
 
     try:
-        result = json.loads(raw_text)
-    except json.JSONDecodeError:
+        result = json.loads(json_str)
+    except (json.JSONDecodeError, ValueError):
         logger.warning(f"Gemini returned non-JSON: {raw_text[:500]}")
         result = {
-            "document_type": "unknown",
-            "confidence_score": 0.0,
-            "error": "AI response was not valid JSON — image may be unreadable",
+            "belge_turu": "bilinmeyen",
+            "guven_skoru": 0.0,
+            "hata": "AI yaniti gecerli JSON degil — goruntu okunamaz durumda olabilir",
         }
+
+    # Migrate old English keys to Turkish keys (Gemini sometimes ignores prompt language)
+    key_migration = {
+        "document_type": "belge_turu",
+        "name": "ad",
+        "surname": "soyad",
+        "id_number": "kimlik_no",
+        "date_of_birth": "dogum_tarihi",
+        "id_expiry": "kimlik_son_kullanma",
+        "nationality": "uyruk",
+        "gender": "cinsiyet",
+        "policy_number": "polis_no",
+        "vehicle_plate": "arac_plaka",
+        "premium": "prim",
+        "policy_expiry": "polis_son_kullanma",
+        "confidence_score": "guven_skoru",
+        "error": "hata",
+    }
+    for en_key, tr_key in key_migration.items():
+        if en_key in result and tr_key not in result:
+            result[tr_key] = result.pop(en_key)
+
+    # Also migrate document_type value: "unknown" → "bilinmeyen"
+    if result.get("belge_turu") == "unknown":
+        result["belge_turu"] = "bilinmeyen"
+    if result.get("belge_turu") == "insurance_policy":
+        result["belge_turu"] = "sigorta_policesi"
 
     # Ensure required fields exist with defaults
     required_fields = [
-        "document_type", "name", "surname", "id_number", "date_of_birth",
-        "id_expiry", "policy_number", "vehicle_plate", "premium",
-        "policy_expiry", "confidence_score", "error"
+        "belge_turu", "ad", "soyad", "kimlik_no", "dogum_tarihi",
+        "kimlik_son_kullanma", "uyruk", "cinsiyet",
+        "polis_no", "arac_plaka", "prim",
+        "polis_son_kullanma", "guven_skoru", "hata"
     ]
     for field in required_fields:
         if field not in result:
             result[field] = None
 
     # Normalize date fields: Gemini sometimes gives Turkish month names or DD/MM/YYYY
-    for date_field in ["date_of_birth", "id_expiry", "policy_expiry"]:
+    for date_field in ["dogum_tarihi", "kimlik_son_kullanma", "polis_son_kullanma"]:
         raw = result.get(date_field)
         if raw and isinstance(raw, str):
             result[date_field] = normalize_date(raw)
@@ -190,9 +247,9 @@ def extract_document(request):
         body = request.get_json(silent=True)
         if not body or "gcs_uri" not in body:
             error_response = json.dumps({
-                "document_type": "unknown",
-                "confidence_score": 0.0,
-                "error": "Missing 'gcs_uri' in request body",
+                "belge_turu": "bilinmeyen",
+                "guven_skoru": 0.0,
+                "hata": "Istek govdesinde 'gcs_uri' eksik",
             })
             return (error_response, 400, headers)
 
@@ -206,20 +263,20 @@ def extract_document(request):
         result["_processed_at"] = datetime.now(timezone.utc).isoformat()
 
         # If low confidence, flag as blurry
-        confidence = result.get("confidence_score", 0.0)
-        if isinstance(confidence, (int, float)) and confidence < 0.4 and not result.get("error"):
-            result["error"] = "Image quality too low for reliable extraction"
+        confidence = result.get("guven_skoru", 0.0)
+        if isinstance(confidence, (int, float)) and confidence < 0.4 and not result.get("hata"):
+            result["hata"] = "Goruntu kalitesi guvenilir cozumleme icin cok dusuk"
 
-        logger.info(f"Extraction complete: doc_type={result.get('document_type')}, "
-                     f"confidence={confidence}")
+        logger.info(f"Extraction complete: belge_turu={result.get('belge_turu')}, "
+                     f"guven_skoru={confidence}")
 
         return (json.dumps(result, ensure_ascii=False), 200, headers)
 
     except Exception as e:
         logger.exception("Extraction failed")
         error_response = json.dumps({
-            "document_type": "unknown",
-            "confidence_score": 0.0,
-            "error": str(e),
+            "belge_turu": "bilinmeyen",
+            "guven_skoru": 0.0,
+            "hata": str(e),
         })
         return (error_response, 500, headers)

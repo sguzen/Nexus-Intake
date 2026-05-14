@@ -17,5 +17,4 @@ FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
-ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 ENTRYPOINT ["dotnet", "NexusIntake.Api.dll"]

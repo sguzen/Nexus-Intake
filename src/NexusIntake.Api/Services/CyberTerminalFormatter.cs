@@ -30,61 +30,63 @@ public static class CyberTerminalFormatter
         var sb = new StringBuilder();
         sb.AppendLine("*`<< NEXUS INTAKE v1.0 >>`*");
         sb.AppendLine();
-        sb.AppendLine("`[SYSTEM: INITIALIZING SCAN PROTOCOL...]`");
-        sb.AppendLine("`[SYSTEM: DECRYPTING DOCUMENT...]`");
+        sb.AppendLine("`[SISTEM: TARAMA PROTOKOLU BASLATILIYOR...]`");
+        sb.AppendLine("`[SISTEM: BELGE COZULUYOR...]`");
         return sb.ToString();
     }
 
     public static string ProcessingComplete()
     {
-        return "`[SYSTEM: EXTRACTION COMPLETE ✓]`";
+        return "`[SISTEM: COZUMLEME TAMAMLANDI ✓]`";
     }
 
     public static string ErrorBlurryImage()
     {
-        return "`[ERROR: SIGNAL NOISE TOO HIGH. RE-SCAN DOCUMENT.]`";
+        return "`[HATA: SINYAL GURULTUSU COK YUKSEK. BELGEYI TEKRAR TARAYIN.]`";
     }
 
     public static string Error(string message)
     {
-        return $"`[ERROR]` {EscapeMarkdown(message)}";
+        return $"`[HATA]` {EscapeMarkdown(message)}";
     }
 
     public static string FormatKimlikResult(CustomerLead lead)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("*`<< KIMLIK EXTRACTION >>`*");
+        sb.AppendLine("*`<< KIMLIK COZUMLEMESI >>`*");
         sb.AppendLine();
-        sb.AppendLine($"`NAME:` {EscapeMarkdown(lead.Name ?? "N/A")}");
-        sb.AppendLine($"`SURNAME:` {EscapeMarkdown(lead.Surname ?? "N/A")}");
-        sb.AppendLine($"`ID NO:` {EscapeMarkdown(lead.IdNumber ?? "N/A")}");
-        sb.AppendLine($"`DOB:` {EscapeMarkdown(lead.DateOfBirth?.ToString("dd.MM.yyyy") ?? "N/A")}");
-        sb.AppendLine($"`EXPIRY:` {EscapeMarkdown(lead.IdExpiry?.ToString("dd.MM.yyyy") ?? "N/A")}");
-        sb.AppendLine($"`CONFIDENCE:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
+        sb.AppendLine($"`AD:` {EscapeMarkdown(lead.Name ?? "YOK")}");
+        sb.AppendLine($"`SOYAD:` {EscapeMarkdown(lead.Surname ?? "YOK")}");
+        sb.AppendLine($"`TC/KIMLIK NO:` {EscapeMarkdown(lead.IdNumber ?? "YOK")}");
+        sb.AppendLine($"`DOGUM TARIHI:` {EscapeMarkdown(lead.DateOfBirth?.ToString("dd.MM.yyyy") ?? "YOK")}");
+        sb.AppendLine($"`UYRUK:` {EscapeMarkdown(lead.Nationality ?? "YOK")}");
+        sb.AppendLine($"`CINSIYET:` {EscapeMarkdown(lead.Gender ?? "YOK")}");
+        sb.AppendLine($"`GECERLILIK:` {EscapeMarkdown(lead.IdExpiry?.ToString("dd.MM.yyyy") ?? "YOK")}");
+        sb.AppendLine($"`GUVEN SKORU:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
         sb.AppendLine();
-        sb.AppendLine("`[STATUS: LEAD REGISTERED ✓]`");
+        sb.AppendLine("`[DURUM: MUSTERI KAYDI OLUSTURULDU ✓]`");
         return sb.ToString();
     }
 
     public static string FormatPolicyResult(CustomerLead lead)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("*`<< POLICY EXTRACTION >>`*");
+        sb.AppendLine("*`<< POLIS COZUMLEMESI >>`*");
         sb.AppendLine();
-        sb.AppendLine($"`POLICY NO:` {EscapeMarkdown(lead.PolicyNumber ?? "N/A")}");
-        sb.AppendLine($"`PLATE:` {EscapeMarkdown(lead.VehiclePlate ?? "N/A")}");
-        sb.AppendLine($"`PREMIUM:` {EscapeMarkdown(lead.Premium?.ToString("N2") ?? "N/A")} TRY");
-        sb.AppendLine($"`EXPIRY:` {EscapeMarkdown(lead.PolicyExpiry?.ToString("dd.MM.yyyy") ?? "N/A")}");
-        sb.AppendLine($"`CONFIDENCE:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
+        sb.AppendLine($"`POLIÇE NO:` {EscapeMarkdown(lead.PolicyNumber ?? "YOK")}");
+        sb.AppendLine($"`PLAKA:` {EscapeMarkdown(lead.VehiclePlate ?? "YOK")}");
+        sb.AppendLine($"`PRIM:` {EscapeMarkdown(lead.Premium?.ToString("N2") ?? "YOK")} TL");
+        sb.AppendLine($"`GECERLILIK:` {EscapeMarkdown(lead.PolicyExpiry?.ToString("dd.MM.yyyy") ?? "YOK")}");
+        sb.AppendLine($"`GUVEN SKORU:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
         sb.AppendLine();
-        sb.AppendLine("`[STATUS: POLICY INGESTED ✓]`");
+        sb.AppendLine("`[DURUM: POLIÇE SISTEME EKLENDI ✓]`");
         return sb.ToString();
     }
 
     public static string FormatValidationErrors(List<string> errors)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("*`<< VALIDATION REPORT >>`*");
+        sb.AppendLine("*`<< DOGRULAMA RAPORU >>`*");
         sb.AppendLine();
         foreach (var err in errors)
         {
