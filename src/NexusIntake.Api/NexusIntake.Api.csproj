@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>NexusIntake.Api</RootNamespace>
+    <UserSecretsId>nexus-intake-api-8a7b3c2d-1e4f-5a6b-9c8d-0e1f2a3b4c5d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

@@ -7,9 +7,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddSingleton<ITelegramBotClient>(sp =>
 {
-    var config = sp.GetRequiredService<IConfiguration>();
-    var token = config["Telegram:BotToken"]
-        ?? throw new InvalidOperationException("Telegram:BotToken is not configured");
+    var token = Environment.GetEnvironmentVariable("Telegram__BotToken")
+                ?? sp.GetRequiredService<IConfiguration>()["Telegram:BotToken"];
+
+    if (string.IsNullOrWhiteSpace(token))
+        throw new InvalidOperationException(
+            "Bot token not found. Set Telegram__BotToken env var or use 'dotnet user-secrets set Telegram:BotToken <token>'.");
+
     return new TelegramBotClient(token);
 });
 
