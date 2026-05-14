@@ -38,17 +38,24 @@ app.MapPost("/webhook/telegram", async (
     IExtractionService extraction,
     ICustomerLeadService leads) =>
 {
+    Console.WriteLine("[🚨 SYSTEM ALERT] WEBHOOK ENDPOINT WAS JUST HIT!");
     try
     {
         using var reader = new StreamReader(context.Request.Body);
         var body = await reader.ReadToEndAsync();
 
-        var update = System.Text.Json.JsonSerializer.Deserialize<Telegram.Bot.Types.Update>(body,
-            new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        Console.WriteLine("[LOG] Webhook hit. Deserializing payload...");
+        var update = Newtonsoft.Json.JsonConvert.DeserializeObject<Telegram.Bot.Types.Update>(body);
 
-        if (update?.Message is not { } message)
+        if (update?.Message == null)
+        {
+            Console.WriteLine("[WARNING] Deserialization failed: Message object is null.");
             return Results.Ok();
+        }
 
+        Console.WriteLine($"[LOG] Message captured! Photo array length: {update.Message.Photo?.Length}");
+
+        var message = update.Message;
         var chatId = message.Chat.Id;
 
         if (message.Photo is { Length: > 0 } photos)
@@ -116,8 +123,10 @@ app.MapPost("/webhook/telegram", async (
 
         return Results.Ok();
     }
-    catch (Exception)
+    catch ( Exception ex)
     {
+        Console.WriteLine($"[CRITICAL ERROR]: {ex.Message}");
+        Console.WriteLine(ex.StackTrace);
         return Results.Ok();
     }
 });

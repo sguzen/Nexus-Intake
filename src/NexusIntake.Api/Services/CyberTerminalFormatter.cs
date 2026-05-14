@@ -60,7 +60,7 @@ public static class CyberTerminalFormatter
         sb.AppendLine($"`ID NO:` {EscapeMarkdown(lead.IdNumber ?? "N/A")}");
         sb.AppendLine($"`DOB:` {EscapeMarkdown(lead.DateOfBirth?.ToString("dd.MM.yyyy") ?? "N/A")}");
         sb.AppendLine($"`EXPIRY:` {EscapeMarkdown(lead.IdExpiry?.ToString("dd.MM.yyyy") ?? "N/A")}");
-        sb.AppendLine($"`CONFIDENCE:` {(lead.ConfidenceScore * 100):F1}%");
+        sb.AppendLine($"`CONFIDENCE:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
         sb.AppendLine();
         sb.AppendLine("`[STATUS: LEAD REGISTERED ✓]`");
         return sb.ToString();
@@ -75,7 +75,7 @@ public static class CyberTerminalFormatter
         sb.AppendLine($"`PLATE:` {EscapeMarkdown(lead.VehiclePlate ?? "N/A")}");
         sb.AppendLine($"`PREMIUM:` {EscapeMarkdown(lead.Premium?.ToString("N2") ?? "N/A")} TRY");
         sb.AppendLine($"`EXPIRY:` {EscapeMarkdown(lead.PolicyExpiry?.ToString("dd.MM.yyyy") ?? "N/A")}");
-        sb.AppendLine($"`CONFIDENCE:` {(lead.ConfidenceScore * 100):F1}%");
+        sb.AppendLine($"`CONFIDENCE:` {EscapeMarkdown($"{(lead.ConfidenceScore * 100):F1}%")}");
         sb.AppendLine();
         sb.AppendLine("`[STATUS: POLICY INGESTED ✓]`");
         return sb.ToString();

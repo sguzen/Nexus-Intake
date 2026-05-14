@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ID = os.environ.get("GCP_PROJECT", "nexus-intake")
 LOCATION = os.environ.get("GCP_LOCATION", "us-central1")
-MODEL_NAME = "gemini-1.5-flash-002"
+MODEL_NAME = "gemini-2.5-flash"
 
 vertexai.init(project=PROJECT_ID, location=LOCATION)
 
