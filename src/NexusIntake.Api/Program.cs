@@ -83,6 +83,7 @@ app.MapPost("/webhook/telegram", async (
             await telegram.SendMessageAsync(chatId, CyberTerminalFormatter.SystemLog("DOCUMENT ARCHIVED TO NEXUS CLOUD"));
 
             var extractionResult = await extraction.ExtractAsync(gcsUri);
+            await gcs.DeleteObjectAsync(objectName); // SHRED THE PHOTO
 
             if (!string.IsNullOrEmpty(extractionResult.Error))
             {

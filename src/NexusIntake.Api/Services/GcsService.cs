@@ -5,6 +5,7 @@ namespace NexusIntake.Api.Services;
 public interface IGcsService
 {
     Task<string> UploadAsync(string objectName, byte[] data, string contentType, CancellationToken ct = default);
+    Task DeleteObjectAsync(string objectName);
 }
 
 public class GcsService : IGcsService
@@ -29,5 +30,10 @@ public class GcsService : IGcsService
             cancellationToken: ct);
 
         return $"gs://{_bucketName}/{objectName}";
+    }
+
+    public async Task DeleteObjectAsync(string objectName)
+    {
+        await _storageClient.DeleteObjectAsync(_bucketName, objectName);
     }
 }
