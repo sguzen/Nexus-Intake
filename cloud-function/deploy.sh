@@ -20,7 +20,7 @@ gcloud functions deploy $FUNCTION_NAME \
   --runtime=$RUNTIME \
   --entry-point=$ENTRY_POINT \
   --trigger-http \
-  --allow-unauthenticated \
+  --no-allow-unauthenticated \
   --memory=$MEMORY \
   --timeout=$TIMEOUT \
   --max-instances=$MAX_INSTANCES \

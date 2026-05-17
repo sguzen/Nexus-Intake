@@ -7,6 +7,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Configuration.AddUserSecrets<Program>();
 
+// Cloud Run dynamically assigns a port — fall back to 8080 for local dev
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 builder.Services.AddSingleton<ITelegramBotClient>(sp =>
 {
     var token = Environment.GetEnvironmentVariable("Telegram__BotToken")
@@ -42,24 +46,46 @@ app.MapPost("/webhook/telegram", async (
     ITelegramService telegram,
     IGcsService gcs,
     IExtractionService extraction,
-    ICustomerLeadService leads) =>
+    ICustomerLeadService leads,
+    IConfiguration config,
+    ILogger<Program> logger) =>
 {
-    Console.WriteLine("[🚨 SYSTEM ALERT] WEBHOOK ENDPOINT WAS JUST HIT!");
+    // Validate Telegram secret token to prevent unauthorized spoofing
+    var expectedSecret = config["Telegram:WebhookSecret"];
+    if (!string.IsNullOrWhiteSpace(expectedSecret))
+    {
+        if (!context.Request.Headers.TryGetValue("X-Telegram-Bot-Api-Secret-Token", out var receivedSecret) ||
+            receivedSecret != expectedSecret)
+        {
+            logger.LogWarning("Unauthorized webhook attempt blocked.");
+            return Results.Unauthorized();
+        }
+    }
+
+    logger.LogInformation("[🚨 SYSTEM ALERT] WEBHOOK ENDPOINT WAS JUST HIT!");
     try
     {
         using var reader = new StreamReader(context.Request.Body);
         var body = await reader.ReadToEndAsync();
 
-        Console.WriteLine("[LOG] Webhook hit. Deserializing payload...");
+        logger.LogInformation("[LOG] Webhook hit. Deserializing payload...");
         var update = Newtonsoft.Json.JsonConvert.DeserializeObject<Telegram.Bot.Types.Update>(body);
 
         if (update?.Message == null)
         {
-            Console.WriteLine("[WARNING] Deserialization failed: Message object is null.");
+            logger.LogWarning("[WARNING] Deserialization failed: Message object is null.");
             return Results.Ok();
         }
 
-        Console.WriteLine($"[LOG] Message captured! Photo array length: {update.Message.Photo?.Length}");
+        // Guard against non-photo/file uploads (compressed photos vs raw files)
+        if (update.Message.Photo == null && update.Message.Document == null)
+        {
+            var chatId = update.Message.Chat.Id;
+            await telegram.SendMessageAsync(chatId, CyberTerminalFormatter.Error("Please send the ID as a compressed Photo, not a raw file."));
+            return Results.Ok();
+        }
+
+        logger.LogInformation("[LOG] Message captured! Photo array length: {PhotoCount}", update.Message.Photo?.Length ?? 0);
 
         var message = update.Message;
         var chatId = message.Chat.Id;
