@@ -132,6 +132,39 @@ app.MapPost("/webhook/telegram", async (
                 return Results.Ok();
             }
 
+            // --- PUSH TO AGENCY WEBHOOK ---
+            try
+            {
+                // Resolve the target webhook URL from configuration
+                // Expected key pattern: "Webhooks:{clientId}" or a default fallback
+                string targetWebhookUrl = config["AgencyWebhook:Url"];
+
+                if (!string.IsNullOrEmpty(targetWebhookUrl))
+                {
+                    using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+
+                    // Add the secret handshake
+                    var handshakeKey = config["AgencyWebhook:SecretKey"];
+                    if (!string.IsNullOrWhiteSpace(handshakeKey))
+                    {
+                        httpClient.DefaultRequestHeaders.Add("X-Nexus-Signature", handshakeKey);
+                    }
+
+                    // Fire the JSON payload to the Agency App in the background
+                    await httpClient.PostAsJsonAsync(targetWebhookUrl, lead, cancellationToken: default);
+                    logger.LogInformation("Successfully pushed lead to {TargetWebhookUrl}", targetWebhookUrl);
+                }
+                else
+                {
+                    logger.LogWarning("AgencyWebhook:Url is not configured. Skipping webhook push.");
+                }
+            }
+            catch (Exception ex)
+            {
+                logger.LogError("Failed to push data to agency webhook: {Message}", ex.Message);
+                // Note: We don't crash the bot if the agency app is down, we just log it.
+            }
+
             await telegram.SendMessageAsync(chatId, CyberTerminalFormatter.ProcessingComplete());
 
             var resultMessage = lead.DocumentType switch
