@@ -50,16 +50,19 @@ public class ExtractionService : IExtractionService
     public async Task<ExtractionResult> ExtractAsync(string gcsUri, CancellationToken ct = default)
     {
         var payload = JsonSerializer.Serialize(new { gcs_uri = gcsUri });
-        var content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json");
+        var request = new HttpRequestMessage(HttpMethod.Post, _extractorUrl)
+        {
+            Content = new StringContent(payload, System.Text.Encoding.UTF8, "application/json")
+        };
 
         // Attach Google OIDC token to authenticate with the secured Cloud Function
         var oidcToken = await GetOidcTokenAsync(ct);
         if (!string.IsNullOrWhiteSpace(oidcToken))
         {
-            content.Headers.Authorization = new AuthenticationHeaderValue("Bearer", oidcToken);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", oidcToken);
         }
 
-        var response = await _httpClient.PostAsync(_extractorUrl, content, ct);
+        var response = await _httpClient.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
         var json = await response.Content.ReadAsStringAsync(ct);
@@ -86,10 +89,8 @@ public class ExtractionService : IExtractionService
                 return accessToken;
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            // If we can't get a token (e.g., local dev), the request will fail if the function is locked.
-            // Log and continue — the caller will get a 401, which is correct for production.
         }
         return null;
     }

@@ -77,18 +77,17 @@ app.MapPost("/webhook/telegram", async (
             return Results.Ok();
         }
 
+        var message = update.Message;
+        var chatId = message.Chat.Id;
+
         // Guard against non-photo/file uploads (compressed photos vs raw files)
-        if (update.Message.Photo == null && update.Message.Document == null)
+        if (message.Photo == null && message.Document == null)
         {
-            var chatId = update.Message.Chat.Id;
             await telegram.SendMessageAsync(chatId, CyberTerminalFormatter.Error("Please send the ID as a compressed Photo, not a raw file."));
             return Results.Ok();
         }
 
-        logger.LogInformation("[LOG] Message captured! Photo array length: {PhotoCount}", update.Message.Photo?.Length ?? 0);
-
-        var message = update.Message;
-        var chatId = message.Chat.Id;
+        logger.LogInformation("[LOG] Message captured! Photo array length: {PhotoCount}", message.Photo?.Length ?? 0);
 
         if (message.Photo is { Length: > 0 } photos)
         {
